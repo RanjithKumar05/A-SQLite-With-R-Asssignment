@@ -1,0 +1,140 @@
+---
+output:
+  html_document: default
+  pdf_document: default
+  word_document: default
+---
+```{r}
+rm(list=ls())
+```
+
+```{r}
+library(DBI)
+library(dplyr)
+con <- dbConnect(RSQLite::SQLite(), "dalt_database.db")
+```
+
+```{r}
+#list of tables in database
+dbListTables(conn = con)
+
+broadband <- tbl(con, "broadband")
+
+house <- tbl(con,"house")
+```
+
+```{r}
+#data in house table
+glimpse(house)
+```
+
+```{r}
+house_df = data.frame(house)
+house_df1 = data.frame(house)
+house_columns <- colnames(house_df)
+house_columns <- house_columns[5:103]
+house_df[,house_columns] = data.frame(apply(house_df[house_columns], 2, as.numeric))
+house_df$Region.Country_code <- house_df1$Region.Country_code
+house_df$Region.Country_name <- house_df1$Region.Country_name
+house_df$Local_authority_code_ <- house_df1$Local_authority_code_
+house_df$Local_authority_name <- house_df1$Local_authority_name
+```
+
+```{r}
+#3.For a given ward in a particular district (e.g., City of Oxford, Cherwell, etc.) find the average prices of houses in a particular year such as 2018
+avg <- house_df %>% 
+  filter(`Local_authority_name` == "City of London") %>% 
+  select(`Year_ending_Mar_2018`, `Year_ending_Jun_2018`, `Year_ending_Sep_2018`,`Year_ending_Dec_2018`) %>% 
+  collect()
+avg_2018 <- (avg$Year_ending_Mar_2018+avg$Year_ending_Jun_2018+avg$Year_ending_Sep_2018+avg$Year_ending_Dec_2018)/4
+avg_2018
+```
+
+```{r}
+#3.For a given ward in a particular district (e.g., City of Oxford, Cherwell, etc.) find the average prices of houses in a particular year such as 2019
+avg <- house_df %>% 
+  filter(`Local_authority_name` == "City of London") %>% 
+  select(`Year_ending_Mar_2019`, `Year_ending_Jun_2019`, `Year_ending_Sep_2019`,`Year_ending_Dec_2019`) %>% 
+  collect()
+avg_2019 <- (avg$Year_ending_Mar_2019+avg$Year_ending_Jun_2019+avg$Year_ending_Sep_2019+avg$Year_ending_Dec_2019)/4
+avg_2019
+
+```
+
+```{r}
+#4. For a given ward in a particular district find the average increase in prices (in percent) between two years
+avg <- house_df %>% 
+  filter(`Local_authority_name` == "City of London") %>% 
+  select(`Year_ending_Mar_2017`, `Year_ending_Jun_2017`, `Year_ending_Sep_2017`,`Year_ending_Dec_2017`) %>% 
+  collect()
+avg_2017 <- (avg$Year_ending_Mar_2017+avg$Year_ending_Jun_2017+avg$Year_ending_Sep_2017+avg$Year_ending_Dec_2017)/4
+#AVerage increse in house price is 
+avg_2018 - avg_2017
+```
+
+```{r}
+#5.Considering all districts (in Oxfordshire), find a ward which has the highest house price in a particular (quarter of a) year, for example, Mar 2019 or Dec 2019
+Max_price <- house_df %>% 
+  filter(`Region.Country_name` == "Yorkshire and The Humber") %>% 
+  select(`Region.Country_name`,`Local_authority_name`,`Year_ending_Mar_2019`) %>% collect()
+require(data.table) ## 1.9.2
+group <- as.data.table(Max_price)
+group %>% group_by(Region.Country_name) %>% top_n(1, Year_ending_Mar_2019)
+
+```
+
+```{r}
+#.6 Considering all districts (in Oxfordshire), find a ward which has the Lowest house price in a particular (quarter of a) year, for example, Mar 2019 or Dec 2019
+group %>% group_by(Region.Country_name) %>% top_n(-1, Year_ending_Mar_2019)
+```
+
+
+```{r}
+broadband_df <- data.frame(broadband)
+glimpse(broadband_df)
+```
+
+
+```{r}
+#7.Based on the data source (you use), find a broadband speed (average downland), or (superfast) broadband availability (%), in a particular ward (or a postcode) of a district
+Average_Download_Speed_Alibon <- broadband_df %>% 
+  filter(`Ward_Name` == "Alibon") %>% 
+  select(`Average_Download_Speed_Mbps`) %>% collect()
+Average_Download_Speed_Alibon
+```
+
+
+```{r}
+#7.Based on the data source (you use), find a broadband speed (average downland), or (superfast) broadband availability (%), in a particular ward (or a postcode) of a district
+UFBB_Availability_Alibon <- broadband_df %>% 
+  filter(`Ward_Name` == "Alibon") %>% 
+  select(`SFBB_or_UFBB_Availability_..30_Mbps.`) %>% collect()
+UFBB_Availability_Alibon
+```
+
+```{r}
+#8.Design a query of your choice using the broadband data. The query should retrieve certain data from the database, which you think, can be useful to a user. 
+#Which ward is having highest average broadband speed
+Average_Download_Speed <- broadband_df %>% 
+  select(`Ward_Name`,`Constituencies`,`Average_Download_Speed_Mbps`) %>% collect()
+require(data.table) ## 1.9.2
+group <- as.data.table(Average_Download_Speed)
+group %>% top_n(1, Average_Download_Speed_Mbps)
+```
+
+```{r}
+#8.Highest speed Constituency
+Average_Download_Speed <- broadband_df %>% 
+  select(`Constituencies`,`Average_Download_Speed_Mbps`) %>% collect()
+group <- as.data.table(Average_Download_Speed)
+group %>% top_n(1, Average_Download_Speed_Mbps)
+```
+
+```{r}
+#8.Highest speed Region
+Average_Download_Speed <- broadband_df %>% 
+  select(`Region._Country`,`Average_Download_Speed_Mbps`) %>% collect()
+group <- as.data.table(Average_Download_Speed)
+group %>% top_n(1, Average_Download_Speed_Mbps)
+```
+
